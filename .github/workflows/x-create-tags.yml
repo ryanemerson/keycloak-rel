@@ -21,6 +21,27 @@ on:
       GH_TOKEN:
         required: true
 
+  workflow_dispatch:
+    inputs:
+      gh-org:
+        description: ""
+        required: true
+        type: string
+      tag:
+        description: ""
+        required: true
+        type: string
+      branch:
+        description: ""
+        required: false
+        type: string
+        default: main
+      set-versions:
+        description: ""
+        required: false
+        type: boolean
+        default: false
+
 defaults:
   run:
     shell: bash
@@ -32,15 +53,15 @@ jobs:
       matrix:
         repository:
           - keycloak
-          - keycloak-nodejs-connect
-          - keycloak-quickstarts
+          # - keycloak-nodejs-connect
+          # - keycloak-quickstarts
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
           repository: "${{ inputs.gh-org }}/${{ matrix.repository }}"
-          token: ${{ secrets.GH_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           path: ${{ matrix.repository }}
           ref: ${{ inputs.branch }}
 
@@ -64,8 +85,11 @@ jobs:
               -Pdistribution \
               -DcommitProtoLockChanges=true
 
+          find . -name "proto.lock"
           git add '**/proto.lock'
+          git status -s
           git diff-index --quiet HEAD || git commit -m "Committing proto.lock files for ${{ inputs.tag }}"
+          git --no-pager show
 
       - name: Create version commit
         if: inputs.set-versions
