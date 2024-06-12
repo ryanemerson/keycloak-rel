@@ -44,13 +44,34 @@ jobs:
           path: ${{ matrix.repository }}
           ref: ${{ inputs.branch }}
 
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Configure git
+        run: |
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
+      - name: Commit proto.lock files
+        if: ${{ matrix.repository == 'keycloak'}}
+        working-directory: ${{ matrix.repository }}
+        run: |
+          ./mvnw -B clean install \
+              -DskipTests \
+              -Pdistribution \
+              -DcommitProtoLockChanges=true
+
+          git add '**/proto.lock'
+          git diff-index --quiet HEAD || git commit -m "Committing proto.lock files for ${{ inputs.tag }}"
+
       - name: Create version commit
         if: inputs.set-versions
         working-directory: ${{ matrix.repository }}
         run: |
           ./set-version.sh ${{ inputs.tag }}
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
           git commit -a -m "Set version to ${{ inputs.tag }}"
 
       - name: Tag commit
